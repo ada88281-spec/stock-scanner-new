@@ -2,8 +2,8 @@ name: 盘后选股与盘前确认
 
 on:
   schedule:
-    - cron: '30 9 * * 1-5'   # 北京17:30
-    - cron: '35 1 * * 1-5'   # 北京09:35
+    - cron: '30 9 * * 1-5'
+    - cron: '35 1 * * 1-5'
   workflow_dispatch:
     inputs:
       mode:
