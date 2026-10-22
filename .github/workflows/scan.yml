@@ -1,0 +1,57 @@
+name: 盘后选股与盘前确认
+
+on:
+  schedule:
+    # UTC 时间换算：北京时间 = UTC + 8
+    # 17:30 收盘后扫描  = UTC 09:30
+    # 09:35 开盘后确认  = UTC 01:35
+    - cron: '30 9 * * 1-5'   # 盘后：候选池
+    - cron: '35 1 * * 1-5'   # 盘前：最终名单
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: '手动指定运行模式'
+        required: true
+        default: 'scan'
+        type: choice
+        options:
+          - scan
+          - confirm
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: 安装依赖
+        run: pip install -r requirements.txt
+
+      - name: 运行盘后扫描
+        if: ${{ github.event.schedule == '30 9 * * 1-5' || github.event.inputs.mode == 'scan' }}
+        env:
+          PUSHPLUS_TOKEN: ${{ secrets.PUSHPLUS_TOKEN }}
+          DATA_DIR: ${{ github.workspace }}
+        run: python scan.py scan
+
+      - name: 运行盘前确认
+        if: ${{ github.event.schedule == '35 1 * * 1-5' || github.event.inputs.mode == 'confirm' }}
+        env:
+          PUSHPLUS_TOKEN: ${{ secrets.PUSHPLUS_TOKEN }}
+          DATA_DIR: ${{ github.workspace }}
+        run: python scan.py confirm
+
+      - name: 上传产物
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: scan-result
+          path: |
+            watchlist.csv
+            final_list.csv
+          retention-days: 7
